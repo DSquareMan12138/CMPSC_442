@@ -2,7 +2,7 @@ import sys
 import tkinter
 
 # Replace FILENAME with your homework file name (eg. homework1_abcd1234)
-import FILENAME as homework
+import homework1_dvd5657 as homework
 
 class Light(tkinter.Canvas):
 

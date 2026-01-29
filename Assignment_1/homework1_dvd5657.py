@@ -1,6 +1,7 @@
 ############################################################
 # CMPSC/DS 442: Uninformed Search
 ############################################################
+from collections import deque
 
 student_name = "Dylan Ding"
 
@@ -104,11 +105,11 @@ def n_queens_solutions(n):
 class LightsOutPuzzle(object):
 
     def __init__(self, board):
-        self.board = board.deepcopy()
+        self.board = [row[:] for row in board]
 
         # dimension of the board
-        self.row = len(board)
-        self.col = len(board[0])
+        self.row = len(self.board)
+        self.col = len(self.board[0])
 
     def get_board(self):
         return self.board
@@ -128,6 +129,9 @@ class LightsOutPuzzle(object):
 
 
     def scramble(self):
+        """
+        scramble the board
+        """
 
         for row in range(self.row):
             for col in range(self.col):
@@ -137,22 +141,73 @@ class LightsOutPuzzle(object):
 
 
     def is_solved(self):
-        pass
+        """
+        :return: Boolean indicating if the puzzle is solved
+        """
+        for row in self.board:
+            if any(row):
+                return False
+        return True
 
     def copy(self):
-        pass
+        return LightsOutPuzzle([row[:] for row in self.board])
 
     def successors(self):
-        pass
+        """
+        give all possible valid move and its outcome
+        """
+        for row in range(self.row):
+            for col in range(self.col):
+                new_board = self.copy()
+                new_board.perform_move(row, col)
+                yield (row, col), new_board
 
     def find_solution(self):
-        pass
+        """
+        use BFS to find the optimal (shortest) solution path
+        :return: the solution path
+
+        """
+        # check if it is solved
+        if self.is_solved():
+            return []
+
+        def board_to_tuple(board_obj):
+            return tuple(tuple(row) for row in board_obj.get_board())
+
+        # make the board operable
+        start_board = board_to_tuple(self)
+
+        # make a queue for BFS
+        q = deque()
+        q.append((self.copy(), []))
+
+        # make a visited memory set
+        visited = {start_board}
+
+        while q:
+            # get current state
+            board, path = q.popleft()
+
+            if board.is_solved():
+                return path
+
+            for move, outcome_board in board.successors():
+                state = board_to_tuple(outcome_board)
+
+                if state in visited:
+                    continue
+
+                visited.add(state)
+                q.append((outcome_board, path + [move]))
+
+        return None
 
 def make_puzzle(rows, cols):
     puzzle = []
     for row in range(rows):
         puzzle.append([False] * cols)
-    return puzzle
+    return LightsOutPuzzle(puzzle)
 
 ############################################################
 # Section 3: Linear Disk Movement
