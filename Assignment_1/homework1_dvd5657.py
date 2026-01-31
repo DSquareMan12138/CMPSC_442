@@ -239,20 +239,20 @@ def solve_identical_disks(length, n):
             if j < length and state[j] == 0 and state[i + 1] == 0:
                 yield (i,j), swap(state, i, j)
 
-        q = deque([(disk, [])])
-        visited = {disk}
+    q = deque([(disk, [])])
+    visited = {disk}
 
-        while q:
-            state, path = q.popleft()
+    while q:
+        state, path = q.popleft()
 
-            # success case
-            if state == success_case:
-                return path
+        # success case
+        if state == success_case:
+            return path
 
-            for new_move, new_state in move(state):
-                if new_state not in visited:
-                    visited.add(new_state)
-                    q.append((new_state, path + [new_move]))
+        for new_move, new_state in move(state):
+            if new_state not in visited:
+                visited.add(new_state)
+                q.append((new_state, path + [new_move]))
 
         return None
 
@@ -283,24 +283,24 @@ def solve_distinct_disks(length, n):
             # move left or right for distance == 2
             for direction in (-2, 2):
                 j = i + direction
-                mid = i + (direction - 1)
+                mid = i + (direction // 2)
                 if length > j >= 0 == state[j] and state[mid] != 0:
                     yield (i, j), swap(state, i, j)
 
-        q = deque([(disk, [])])
-        visited = {disk}
+    q = deque([(disk, [])])
+    visited = {disk}
 
-        while q:
-            state, path = q.popleft()
+    while q:
+        state, path = q.popleft()
 
-            # success case
-            if state == success_case:
-                return path
+        # success case
+        if state == success_case:
+            return path
 
-            for new_move, new_state in move(state):
-                if new_state not in visited:
-                    visited.add(new_state)
-                    q.append((new_state, path + [new_move]))
+        for new_move, new_state in move(state):
+            if new_state not in visited:
+                visited.add(new_state)
+                q.append((new_state, path + [new_move]))
 
         return None
 
