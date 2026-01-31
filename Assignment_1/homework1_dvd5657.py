@@ -214,8 +214,96 @@ def make_puzzle(rows, cols):
 ############################################################
 
 def solve_identical_disks(length, n):
-    pass
+
+    disk = (1,) * n + (0,) * (length - n)
+    success_case = (0,) * (length - n) + (1,) * n
+
+    def swap(state, old_index, new_index):
+        s = list(state)
+        s[old_index], s[new_index] = s[new_index], s[old_index]
+        return tuple(s)
+
+    def move(state):
+        for i, value in enumerate(state):
+            if value != 1:
+                continue
+
+            # move right for distance == 1
+            j = i + 1
+            if j < length and state[j] == 0:
+                yield (i,j), swap(state, i, j)
+
+
+            # move right for distance == 2
+            j = j + 2
+            if j < length and state[j] == 0 and state[i + 1] == 0:
+                yield (i,j), swap(state, i, j)
+
+        q = deque([(disk, [])])
+        visited = {disk}
+
+        while q:
+            state, path = q.popleft()
+
+            # success case
+            if state == success_case:
+                return path
+
+            for new_move, new_state in move(state):
+                if new_state not in visited:
+                    visited.add(new_state)
+                    q.append((new_state, path + [new_move]))
+
+        return None
+
+
+
+
+    return
 
 def solve_distinct_disks(length, n):
-    pass
+
+    disk = tuple(range(1, n + 1)) + (0,) * (length - n)
+    success_case = (0,) * (length - n) + tuple(range(n, 0, -1))
+
+    def swap(state, old_index, new_index):
+        s = list(state)
+        s[old_index], s[new_index] = s[new_index], s[old_index]
+        return tuple(s)
+
+    def move(state):
+        for i, value in enumerate(state):
+            if value == 0:
+                continue
+
+            # move left or right for distance == 1
+            for direction in (-1, 1):
+                j = i + direction
+                if length > j >= 0 == state[j]:
+                    yield (i, j), swap(state, i, j)
+
+
+            # move left or right for distance == 2
+            for direction in (-2, 2):
+                j = i + direction
+                mid = i + (direction - 1)
+                if length > j >= 0 == state[j] and state[mid] != 0:
+                    yield (i, j), swap(state, i, j)
+
+        q = deque([(disk, [])])
+        visited = {disk}
+
+        while q:
+            state, path = q.popleft()
+
+            # success case
+            if state == success_case:
+                return path
+
+            for new_move, new_state in move(state):
+                if new_state not in visited:
+                    visited.add(new_state)
+                    q.append((new_state, path + [new_move]))
+
+        return None
 
