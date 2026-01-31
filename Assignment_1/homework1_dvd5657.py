@@ -256,10 +256,7 @@ def solve_identical_disks(length, n):
 
         return None
 
-
-
-
-    return
+    return None
 
 def solve_distinct_disks(length, n):
 
