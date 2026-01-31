@@ -231,13 +231,13 @@ def solve_identical_disks(length, n):
             # move right for distance == 1
             j = i + 1
             if j < length and state[j] == 0:
-                yield (i,j), swap(state, i, j)
+                yield (i, j), swap(state, i, j)
 
 
             # move right for distance == 2
-            j = j + 2
-            if j < length and state[j] == 0 and state[i + 1] == 0:
-                yield (i,j), swap(state, i, j)
+            j = i + 2
+            if j < length and state[j] == 0 and state[i + 1] == 1:
+                yield (i, j), swap(state, i, j)
 
     q = deque([(disk, [])])
     visited = {disk}
@@ -256,7 +256,6 @@ def solve_identical_disks(length, n):
 
     return None
 
-    return None
 
 def solve_distinct_disks(length, n):
 
