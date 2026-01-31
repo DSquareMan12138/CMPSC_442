@@ -254,7 +254,7 @@ def solve_identical_disks(length, n):
                 visited.add(new_state)
                 q.append((new_state, path + [new_move]))
 
-        return None
+    return None
 
     return None
 
@@ -302,5 +302,5 @@ def solve_distinct_disks(length, n):
                 visited.add(new_state)
                 q.append((new_state, path + [new_move]))
 
-        return None
+    return None
 
