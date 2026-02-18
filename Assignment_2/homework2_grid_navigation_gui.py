@@ -2,7 +2,7 @@ import sys
 import tkinter
 
 # Replace FILENAME with your homework file name (eg. homework2_abcd1234)
-import FILENAME as homework
+import homework2_dvd5567 as homework
 
 class Grid(tkinter.Canvas):
 
