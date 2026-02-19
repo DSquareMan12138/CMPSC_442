@@ -282,30 +282,15 @@ def find_shortest_path(start, goal, scene):
 
 
 ############################################################
-# Section 3: Linear Disk Movement, Revisited
+# Section 3: Linear Disk Movement, Revisitedd
 ############################################################
 def heuristic(state, goal):
-    # collect disk positions in state (left -> right)
-    state_positions = []
+
+    sum = 0
     for i in range(len(state)):
-        if state[i] != 0:
-            state_positions.append(i)
+        sum += math.ceil(abs(goal[i] - state[i])/2)
 
-    # collect disk positions in goal
-    goal_positions = []
-    for i in range(len(goal)):
-        if goal[i] != 0:
-            goal_positions.append(i)
-
-    # reverse goal alignment (critical step)
-    goal_positions.reverse()
-
-    h = 0
-    for i in range(len(state_positions)):
-        d = abs(state_positions[i] - goal_positions[i])
-        h += math.ceil(d / 2)
-
-    return h
+    return sum
 
 
 def solve_distinct_disks_v2(length, n):
