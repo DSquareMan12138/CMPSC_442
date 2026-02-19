@@ -127,27 +127,17 @@ class TilePuzzle(object):
         start_state = self._state_tuple()
 
         while True:
-            found_solution = False
+            found_any = False
 
-            # best remaining depth seen in this iteration
-            depth_seen = {start_state: depth}
-
-            for sol in self._iddfs_helper(
-                remaining_depth=depth,
-                path=[],
-                path_set={start_state},
-                depth_seen=depth_seen
-            ):
-                found_solution = True
+            for sol in self._iddfs_helper(limit=depth, path=[], path_set={start_state}):
+                found_any = True
                 yield sol
-
-            if found_solution:
+            if found_any:
                 return
-
             depth += 1
 
 
-    def _iddfs_helper(self, remaining_depth, path, path_set, depth_seen):
+    def _iddfs_helper(self, limit, path, path_set):
         """
         Depth-limited DFS used by IDDFS
         """
@@ -155,33 +145,16 @@ class TilePuzzle(object):
         if self.is_solved():
             yield path
             return
-
-        if remaining_depth == 0:
+        if limit == 0:
             return
 
-        for move, next_puzzle in self.successors():
-
-            state_key = next_puzzle._state_tuple()
-
-            # prevent undo loops (cycle in current path)
-            if state_key in path_set:
+        for move, nxt in self.successors():
+            nxt_state = nxt._state_tuple()
+            if nxt_state in path_set:
                 continue
-
-            prev_depth = depth_seen.get(state_key)
-            if prev_depth is not None and prev_depth >= remaining_depth - 1:
-                continue
-
-            depth_seen[state_key] = remaining_depth - 1
-
-            path_set.add(state_key)
-            yield from next_puzzle._iddfs_helper(
-                remaining_depth - 1,
-                path + [move],
-                path_set,
-                depth_seen
-            )
-            path_set.remove(state_key)
-
+            path_set.add(nxt_state)
+            yield from nxt._iddfs_helper(limit - 1, path + [move], path_set)
+            path_set.remove(nxt_state)
 
     def _state_tuple(self):
         return tuple(tuple(row) for row in self.board)
@@ -228,11 +201,7 @@ class TilePuzzle(object):
                 new_g = g + 1
                 heappush(priority_q, (new_g + manhattan(nxt_state), new_g, nxt_state, path + [move]))
 
-        return []
-
-    def _state_tuple(self):
-        """"""
-        return tuple(tuple(row) for row in self.board)
+        return None
 
     def _is_solved_state(self, state):
         """
@@ -315,17 +284,28 @@ def find_shortest_path(start, goal, scene):
 ############################################################
 # Section 3: Linear Disk Movement, Revisited
 ############################################################
-
 def heuristic(state, goal):
+    # collect disk positions in state (left -> right)
+    state_positions = []
+    for i in range(len(state)):
+        if state[i] != 0:
+            state_positions.append(i)
 
-    goal_pos = {v: i for i, v in enumerate(goal)}
-    heu_val = 0
-    for i, v in enumerate(state):
-        if v == 0:
-            continue
-        d = abs(i - goal_pos[v])
-        heu_val += math.ceil(d / 2)
-    return heu_val
+    # collect disk positions in goal
+    goal_positions = []
+    for i in range(len(goal)):
+        if goal[i] != 0:
+            goal_positions.append(i)
+
+    # reverse goal alignment (critical step)
+    goal_positions.reverse()
+
+    h = 0
+    for i in range(len(state_positions)):
+        d = abs(state_positions[i] - goal_positions[i])
+        h += math.ceil(d / 2)
+
+    return h
 
 
 def solve_distinct_disks_v2(length, n):
