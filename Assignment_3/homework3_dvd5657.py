@@ -30,13 +30,11 @@ def make_dominoes_game(rows, cols):
     :rtype: DominoesGame
     """
     board = []
-
     for r in range(rows):
         row = []
         for c in range(cols):
             row.append(False)
         board.append(row)
-
     return DominoesGame(board)
 
 class DominoesGame(object):
@@ -51,18 +49,12 @@ class DominoesGame(object):
         return self.board
 
     def reset(self):
-        """
-        instead of put everything to False, create a new one avoid potential bugs
-        :return:
-        """
         new_board = []
-
         for r in range(self.rows):
             row = []
             for c in range(self.cols):
                 row.append(False)
             new_board.append(row)
-
         self.board = new_board
 
     def is_legal_move(self, row, col, vertical):
@@ -82,6 +74,7 @@ class DominoesGame(object):
             if self.board[row][col + 1]:
                 return False
             return True
+
 
     def legal_moves(self, vertical):
         for row in range(self.rows):
@@ -134,38 +127,52 @@ class DominoesGame(object):
         return (len(list(self.legal_moves(vertical))) -
                 len(list(self.legal_moves(not vertical))))
 
-    def get_best_move(self, vertical, limit):
-        def alphabeta(game, depth, alpha, beta, maximizing_player):
-            if depth == 0 or game.game_over(vertical if maximizing_player else not vertical):
-                return game.evaluate(vertical), None
+    def get_best_move(self, limit, vertical):
 
-            best_move = None
+        def alphabeta(game, depth, alpha, beta, maximizing):
+            if depth == 0 or game.game_over(vertical if maximizing else not vertical):
+                return game.evaluate(vertical), None, 1
 
-            if maximizing_player:
-                value = float("-inf")
+            total_leaves = 0
+
+            if maximizing:
+                best_val = float("-inf")
+                best_move = None
+
                 for move, succ in game.successors(vertical):
-                    score, _ = alphabeta(succ, depth - 1, alpha, beta, False)
-                    if score > value:
-                        value = score
-                        best_move = move
-                    alpha = max(alpha, value)
-                    if beta <= alpha:
-                        break
-                return value, best_move
-            else:
-                value = float("inf")
-                for move, succ in game.successors(not vertical):
-                    score, _ = alphabeta(succ, depth - 1, alpha, beta, True)
-                    if score < value:
-                        value = score
-                        best_move = move
-                    beta = min(beta, value)
-                    if beta <= alpha:
-                        break
-                return value, best_move
+                    val, _, leaves = alphabeta(succ, depth - 1, alpha, beta, False)
+                    total_leaves += leaves
 
-        score, move = alphabeta(self, limit, float("-inf"), float("inf"), True)
-        return move
+                    if val > best_val:
+                        best_val = val
+                        best_move = move
+
+                    alpha = max(alpha, best_val)
+                    if alpha >= beta:
+                        break
+
+                return best_val, best_move, total_leaves
+
+            else:
+                best_val = float("inf")
+                best_move = None
+
+                for move, succ in game.successors(not vertical):
+                    val, _, leaves = alphabeta(succ, depth - 1, alpha, beta, True)
+                    total_leaves += leaves
+
+                    if val < best_val:
+                        best_val = val
+                        best_move = move
+
+                    beta = min(beta, best_val)
+                    if alpha >= beta:
+                        break
+
+                return best_val, best_move, total_leaves
+
+        value, move, leaves = alphabeta(self, limit, float("-inf"), float("inf"), True)
+        return move, value, leaves
 
 
 ############################################################
@@ -183,32 +190,23 @@ def sudoku_cells():
 
 def sudoku_arcs():
     arcs = []
+    for r in range(9):
+        for c in range(9):
+            cell1 = (r, c)
 
-    for row in range(9):
-        for col in range(9):
-            cell1 = (row, col)
+            for i in range(9):
+                if i != c:
+                    arcs.append((cell1, (r, i)))
+                if i != r:
+                    arcs.append((cell1, (i, c)))
 
-            # Same row
-            for other_col in range(9):
-                if other_col != col:
-                    cell2 = (row, other_col)
-                    arcs.append((cell1, cell2))
+            br, bc = (r // 3) * 3, (c // 3) * 3
+            for i in range(br, br + 3):
+                for j in range(bc, bc + 3):
+                    if (i, j) != cell1:
+                        arcs.append((cell1, (i, j)))
 
-            # Same column
-            for other_row in range(9):
-                if other_row != row:
-                    cell2 = (other_row, col)
-                    arcs.append((cell1, cell2))
-
-            # Same 3x3 block
-            start_row = (row // 3) * 3
-            start_col = (col // 3) * 3
-            for r in range(start_row, start_row + 3):
-                for c in range(start_col, start_col + 3):
-                    if (r, c) != cell1:
-                        cell2 = (r, c)
-                        if (cell1, cell2) not in arcs:
-                            arcs.append((cell1, cell2))
+    return arcs
 
 def read_board(path):
     board = {}
@@ -258,17 +256,20 @@ class Sudoku(object):
         return removed
 
     def infer_ac3(self):
-        queue = deque()
-        for arc in self.ARCS:
-            queue.append(arc)
+        queue = deque(self.ARCS)
 
         while queue:
             cell1, cell2 = queue.popleft()
 
             if self.remove_inconsistent_values(cell1, cell2):
-                for neighbor1, neighbor2 in self.ARCS:
-                    if neighbor2 == cell1 and neighbor1 != cell2:
-                        queue.append((neighbor1, cell1))
+                if len(self.board[cell1]) == 0:
+                    return False
+
+                for x, y in self.ARCS:
+                    if y == cell1 and x != cell2:
+                        queue.append((x, cell1))
+
+        return True
 
     def infer_improved(self):
         changed = True
@@ -280,9 +281,10 @@ class Sudoku(object):
             for cell in self.CELLS:
                 before[cell] = set(self.board[cell])
 
-            self.infer_ac3()
+            if not self.infer_ac3():
+                return False
 
-            # Hidden singles in rows
+            # hidden singles in rows
             for row in range(9):
                 for value in range(1, 10):
                     places = []
@@ -293,7 +295,7 @@ class Sudoku(object):
                     if len(places) == 1 and len(self.board[places[0]]) > 1:
                         self.board[places[0]] = {value}
 
-            # Hidden singles in columns
+            # hidden singles in columns
             for col in range(9):
                 for value in range(1, 10):
                     places = []
@@ -304,7 +306,7 @@ class Sudoku(object):
                     if len(places) == 1 and len(self.board[places[0]]) > 1:
                         self.board[places[0]] = {value}
 
-            # Hidden singles in 3x3 blocks
+            # hidden singles in 3x3 blocks
             for block_row in range(0, 9, 3):
                 for block_col in range(0, 9, 3):
                     for value in range(1, 10):
@@ -318,72 +320,95 @@ class Sudoku(object):
                             self.board[places[0]] = {value}
 
             for cell in self.CELLS:
+                if len(self.board[cell]) == 0:
+                    return False
+
+            for cell in self.CELLS:
                 if self.board[cell] != before[cell]:
                     changed = True
                     break
 
+        return True
 
-def infer_with_guessing(self):
-    self.infer_improved()
+    def is_valid_solution(self):
+        # check rows
+        for row in range(9):
+            values = []
+            for col in range(9):
+                cell = (row, col)
+                if len(self.board[cell]) != 1:
+                    return False
+                values.append(next(iter(self.board[cell])))
+            if len(set(values)) != 9:
+                return False
 
-    # Failure: some cell has no possible values
-    for cell in self.CELLS:
-        if len(self.board[cell]) == 0:
-            return
+        # check columns
+        for col in range(9):
+            values = []
+            for row in range(9):
+                cell = (row, col)
+                if len(self.board[cell]) != 1:
+                    return False
+                values.append(next(iter(self.board[cell])))
+            if len(set(values)) != 9:
+                return False
 
-    # Success: all cells fixed
-    solved = True
-    for cell in self.CELLS:
-        if len(self.board[cell]) != 1:
-            solved = False
-            break
-    if solved:
-        return
+        # check 3x3 blocks
+        for start_row in range(0, 9, 3):
+            for start_col in range(0, 9, 3):
+                values = []
+                for row in range(start_row, start_row + 3):
+                    for col in range(start_col, start_col + 3):
+                        cell = (row, col)
+                        if len(self.board[cell]) != 1:
+                            return False
+                        values.append(next(iter(self.board[cell])))
+                if len(set(values)) != 9:
+                    return False
 
-    # Choose a cell with multiple possibilities
-    guess_cell = None
-    guess_size = None
-    for cell in self.CELLS:
-        size = len(self.board[cell])
-        if size > 1:
-            if guess_cell is None or size < guess_size:
-                guess_cell = cell
-                guess_size = size
+        return True
 
-    original_board = {}
-    for cell in self.CELLS:
-        original_board[cell] = set(self.board[cell])
+    def infer_with_guessing(self):
+        if not self.infer_improved():
+            return False
 
-    for guess in original_board[guess_cell]:
-        new_board = {}
+        # contradiction: empty domain
         for cell in self.CELLS:
-            new_board[cell] = set(original_board[cell])
+            if len(self.board[cell]) == 0:
+                return False
 
-        new_board[guess_cell] = {guess}
-        new_sudoku = Sudoku(new_board)
-        new_sudoku.infer_with_guessing()
-
-        valid = True
+        # if all singletons, only succeed if the whole board is valid
+        all_singletons = True
         for cell in self.CELLS:
-            if len(new_sudoku.board[cell]) == 0:
-                valid = False
+            if len(self.board[cell]) != 1:
+                all_singletons = False
                 break
 
-        if valid:
-            solved = True
-            for cell in self.CELLS:
-                if len(new_sudoku.board[cell]) != 1:
-                    solved = False
-                    break
+        if all_singletons:
+            return self.is_valid_solution()
 
-            if solved:
+        # choose cell with fewest possibilities > 1
+        guess_cell = None
+        guess_size = None
+        for cell in self.CELLS:
+            size = len(self.board[cell])
+            if size > 1:
+                if guess_cell is None or size < guess_size:
+                    guess_cell = cell
+                    guess_size = size
+
+        # try guesses with backtracking
+        for guess in list(self.board[guess_cell]):
+            new_board = {}
+            for cell in self.CELLS:
+                new_board[cell] = set(self.board[cell])
+
+            new_board[guess_cell] = {guess}
+            new_sudoku = Sudoku(new_board)
+
+            if new_sudoku.infer_with_guessing():
                 for cell in self.CELLS:
                     self.board[cell] = set(new_sudoku.board[cell])
-                return
+                return True
 
-            # In case recursive inference made progress but did not fully solve,
-            # keep the consistent result.
-            for cell in self.CELLS:
-                self.board[cell] = set(new_sudoku.board[cell])
-            return
-
+        return False
